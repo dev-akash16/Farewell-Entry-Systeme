@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Generator with Sheet Upload & PDF Export</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #0a1628;
+            color: #e8edf2;
+            padding: 20px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #152238;
+            border-radius: 24px;
+            padding: 28px;
+            margin-bottom: 24px;
+            border: 1px solid #2a4058;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        h1 i {
+            color: #ffb347;
+        }
+        .sub {
+            color: #9ab3cc;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin: 12px 0 4px;
+            color: #c4d6e8;
+        }
+        textarea,
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid #2a4058;
+            background: #0d1b2d;
+            color: #f0f6ff;
+            font-size: 14px;
+            transition: border 0.2s;
+        }
+        textarea:focus,
+        input:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.2);
+        }
+        textarea {
+            min-height: 160px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .btn {
+            background: #ffb347;
+            color: #0a1628;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            border: 1px solid #ffcc80;
+        }
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(255, 179, 71, 0.3);
+        }
+        .btn-secondary {
+            background: #2a4058;
+            color: #e8edf2;
+            border-color: #3d5d7a;
+        }
+        .btn-secondary:hover {
+            background: #3d5d7a;
+            box-shadow: 0 6px 20px rgba(42, 64, 88, 0.4);
+        }
+        .btn-success {
+            background: #2ecc71;
+            color: #0a1628;
+            border-color: #55d98a;
+        }
+        .btn-success:hover {
+            background: #3ddc84;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+            border-color: #f05a4a;
+        }
+        .btn-danger:hover {
+            background: #f05a4a;
+        }
+        .btn-purple {
+            background: #8e44ad;
+            color: #fff;
+            border-color: #a569bd;
+        }
+        .btn-purple:hover {
+            background: #a569bd;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 12px;
+        }
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 14px;
+            margin: 16px 0;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 12px;
+            background: #0d1b2d;
+            border-radius: 18px;
+            border: 1px solid #1f3447;
+        }
+        .qr-item {
+            background: #152238;
+            border-radius: 14px;
+            padding: 10px 6px 8px;
+            text-align: center;
+            border: 1px solid #2a4058;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .qr-item:hover {
+            border-color: #ffb347;
+            transform: translateY(-2px);
+        }
+        .qr-item canvas {
+            display: block;
+            margin: 0 auto 6px;
+            border-radius: 8px;
+            background: #fff;
+            padding: 3px;
+        }
+        .qr-label {
+            font-size: 11px;
+            color: #b0c7dd;
+            word-break: break-word;
+            line-height: 1.3;
+            max-width: 120px;
+            margin: 0 auto;
+        }
+        .qr-label strong {
+            color: #e8edf2;
+            display: block;
+            font-size: 12px;
+        }
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px 40px;
+            background: #0d1b2d;
+            padding: 14px 20px;
+            border-radius: 18px;
+            border: 1px solid #1f3447;
+            margin: 10px 0;
+        }
+        .stats span {
+            font-size: 14px;
+        }
+        .stats .num {
+            font-weight: 700;
+            font-size: 22px;
+            color: #ffb347;
+            margin-right: 4px;
+        }
+        .upload-zone {
+            border: 2px dashed #2a4058;
+            border-radius: 18px;
+            padding: 30px 20px;
+            text-align: center;
+            background: #0d1b2d;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .upload-zone:hover {
+            border-color: #ffb347;
+            background: #152238;
+        }
+        .upload-zone i {
+            font-size: 48px;
+            color: #4a6a85;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .upload-zone p {
+            color: #9ab3cc;
+            margin: 6px 0;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .badge-status {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 40px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .badge-available {
+            background: #1a4a3a;
+            color: #7ddfb0;
+        }
+        .badge-used {
+            background: #4a2a2a;
+            color: #ff6b6b;
+        }
+        .badge-both {
+            background: #2a3a4a;
+            color: #b0c7dd;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 18px;
+            background: #0d1b2d;
+            padding: 4px;
+            border-radius: 60px;
+            border: 1px solid #1f3447;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 40px;
+            background: transparent;
+            color: #9ab3cc;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: #ffb347;
+            color: #0a1628;
+            box-shadow: 0 4px 12px rgba(255, 179, 71, 0.2);
+        }
+        .tab-btn:hover:not(.active) {
+            background: #1f3447;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .log-area {
+            background: #0a1622;
+            border-radius: 16px;
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            border: 1px solid #1f3447;
+            color: #b0c7dd;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .log-area .entry-log {
+            color: #7ddfb0;
+        }
+        .log-area .food-log {
+            color: #ffb347;
+        }
+        .log-area .error-log {
+            color: #ff6b6b;
+        }
+        .page-size-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .page-size-selector select {
+            background: #0d1b2d;
+            color: #e8edf2;
+            border: 1px solid #2a4058;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .qr-grid {
+                max-height: none;
+                overflow: visible;
+            }
+            .card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                background: #fff !important;
+                color: #000 !important;
+                border: 1px solid #ccc !important;
+            }
+            .qr-item {
+                background: #f5f5f5 !important;
+                border-color: #ddd !important;
+            }
+            .qr-label {
+                color: #333 !important;
+            }
+            .qr-label strong {
+                color: #000 !important;
+            }
+            body {
+                background: #fff !important;
+            }
+        }
+        /* PDF Preview Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            overflow: auto;
+        }
+        .modal-content {
+            background: #152238;
+            margin: 20px auto;
+            padding: 24px;
+            border-radius: 24px;
+            max-width: 900px;
+            border: 1px solid #2a4058;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 16px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #9ab3cc;
+            background: none;
+            border: none;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        #pdfPreviewGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .pdf-page-preview {
+            background: #0d1b2d;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #2a4058;
+            text-align: center;
+        }
+        .pdf-page-preview canvas {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        .pdf-page-preview .page-num {
+            color: #9ab3cc;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1><i class="fas fa-qrcode"></i> QR Generator Pro</h1>
+        <div class="sub">📤 Upload student sheet · Generate QR codes · Export PDF (20 per page)</div>
+
+        <!-- Tabs -->
+        <div class="tab-bar no-print">
+            <button class="tab-btn active" data-tab="tab-generate">📱 Generate QR</button>
+            <button class="tab-btn" data-tab="tab-scan">📷 Scanner</button>
+            <button class="tab-btn" data-tab="tab-logs">📊 Logs</button>
+        </div>
+
+        <!-- ===== TAB 1: GENERATE ===== -->
+        <div id="tab-generate" class="tab-content active">
+            <div class="grid-2">
+                <div>
+                    <label>📤 Upload Student Sheet (CSV or Excel)</label>
+                    <div class="upload-zone" id="uploadZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p><strong>Click or drag to upload</strong></p>
+                        <p style="font-size:13px; color:#7a96b0;">Supports .csv, .xlsx, .xls (Name, Branch, Mobile)</p>
+                        <div class="file-input-wrapper">
+                            <button class="btn btn-secondary" style="margin:0;">Choose File</button>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+                        </div>
+                    </div>
+                    <div id="uploadStatus" style="color:#7ddfb0; margin-top:8px;"></div>
+
+                    <label>📝 Or paste data manually (one per line)</label>
+                    <textarea id="studentData" placeholder="Name, Branch, Mobile&#10;Aarav Sharma, CSE, 9876543210">Aarav Sharma, CSE, 9876543210
+Priya Patel, ECE, 9876543211
+Rahul Verma, ME, 9876543212
+Sneha Reddy, Civil, 9876543213
+Arjun Nair, CSE, 9876543214
+Kavya Menon, Chemical, 9876543215
+Vikram Singh, IT, 9876543216
+Ananya Iyer, Biotech, 9876543217
+Rohit Gupta, ECE, 9876543218
+Neha Joshi, ME, 9876543219
+Deepak Kumar, CSE, 9876543220
+Pooja Desai, Civil, 9876543221
+Suresh Babu, IT, 9876543222
+Meera Nair, Biotech, 9876543223
+Kiran Raj, Chemical, 9876543224
+Divya Menon, CSE, 9876543225
+Aditya Singh, ECE, 9876543226
+Lakshmi Reddy, ME, 9876543227
+Naveen Kumar, Civil, 9876543228
+Shreya Sharma, IT, 9876543229</textarea>
+                    <div class="small-note" style="color:#7a96b0; font-size:13px; margin-top:4px;">Format: <strong>Name, Branch, Mobile</strong> (comma separated)</div>
+
+                    <div class="flex-row">
+                        <button class="btn" id="generateBtn"><i class="fas fa-qrcode"></i> Generate QR Codes</button>
+                        <button class="btn btn-secondary" id="sampleBtn"><i class="fas fa-plus"></i> Load 20 Sample</button>
+                        <button class="btn btn-danger" id="clearQrBtn"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                </div>
+                <div>
+                    <label>📊 QR Codes Generated (<span id="qrCount">0</span>)</label>
+                    <div class="stats">
+                        <span><span class="num" id="totalStudents">0</span> Total</span>
+                        <span><span class="num" id="availableCount">0</span> Available</span>
+                        <span><span class="num" id="usedCount">0</span> Used</span>
+                    </div>
+                    <div id="qrGridContainer" class="qr-grid" style="max-height:400px;"></div>
+
+                    <div class="page-size-selector">
+                        <label style="margin:0;">QRs per page:</label>
+                        <select id="qrsPerPage">
+                            <option value="16">16</option>
+                            <option value="20" selected>20</option>
+                            <option value="24">24</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                        </select>
+                    </div>
+
+                    <div class="flex-row">
+                        <button class="btn btn-success" id="pdfBtn"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                        <button class="btn btn-purple" id="previewPdfBtn"><i class="fas fa-eye"></i> Preview PDF</button>
+                        <button class="btn btn-secondary" id="printBtn"><i class="fas fa-print"></i> Print</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TAB 2: SCANNER ===== -->
+        <div id="tab-scan" class="tab-content">
+            <div class="grid-2">
+                <div>
+                    <label>📷 Scan QR Code</label>
+                    <div id="scannerContainer" style="background:#0a1622; border-radius:20px; padding:12px; min-height:280px; border:1px solid #2a4058;">
+                        <div id="qr-reader" style="width:100%;"></div>
+                        <div id="scannerStatus" style="color:#9ab3cc; text-align:center; padding:8px;">📸 Camera ready — scan a QR</div>
+                    </div>
+                    <div class="flex-row">
+                        <button class="btn btn-secondary" id="startScannerBtn"><i class="fas fa-play"></i> Start Scanner</button>
+                        <button class="btn btn-secondary" id="stopScannerBtn"><i class="fas fa-stop"></i> Stop</button>
+                    </div>
+                </div>
+                <div>
+                    <label>👤 Scanned Result</label>
+                    <div id="scanResult" style="background:#0d1b2d; border-radius:18px; padding:18px; border:1px solid #2a4058; min-height:180px;">
+                        <div id="scanPlaceholder" style="color:#7a96b0; text-align:center; padding:20px;">
+                            <i class="fas fa-qrcode" style="font-size:40px; opacity:0.3; display:block; margin-bottom:10px;"></i>
+                            Scan a QR code to see details
+                        </div>
+                        <div id="scanInfo" class="hidden">
+                            <div style="font-size:22px; font-weight:700; color:#fff;" id="scanName">—</div>
+                            <div style="font-size:16px; color:#b0c7dd;" id="scanBranch">—</div>
+                            <div style="font-size:14px; color:#7a96b0;" id="scanMobile">📱 —</div>
+                            <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap;">
+                                <span id="scanEntryBadge" style="background:#1f3447; padding:4px 16px; border-radius:40px; font-size:13px;">🚪 Entry: —</span>
+                                <span id="scanFoodBadge" style="background:#1f3447; padding:4px 16px; border-radius:40px; font-size:13px;">🍽️ Food: —</span>
+                            </div>
+                            <div id="scanTimeLog" style="margin-top:10px; font-size:12px; color:#7a96b0;"></div>
+                        </div>
+                    </div>
+                    <div class="flex-row">
+                        <button class="btn btn-success" id="manualEntryBtn"><i class="fas fa-door-open"></i> Mark Entry</button>
+                        <button class="btn btn-success" id="manualFoodBtn"><i class="fas fa-utensils"></i> Mark Food</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TAB 3: LOGS ===== -->
+        <div id="tab-logs" class="tab-content">
+            <label>📋 Scan Logs (<span id="logCount">0</span> entries)</label>
+            <div class="log-area" id="logDisplay">📭 No logs yet. Scan a QR code to start.</div>
+            <div class="flex-row">
+                <button class="btn btn-secondary" id="exportCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+                <button class="btn btn-secondary" id="copyLogsBtn"><i class="fas fa-copy"></i> Copy Logs</button>
+                <button class="btn btn-danger" id="clearLogsBtn"><i class="fas fa-eraser"></i> Clear Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Preview Modal -->
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">&times;</button>
+            <h2 style="color:#e8edf2; margin-bottom:12px;">📄 PDF Preview</h2>
+            <div id="pdfPreviewGrid"></div>
+            <div class="flex-row" style="justify-content:center;">
+                <button class="btn btn-success" id="downloadPdfFromPreview"><i class="fas fa-download"></i> Download PDF</button>
+                <button class="btn btn-secondary" id="closeModalBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden QR render target -->
+    <div id="qrRenderTarget" style="display:none;"></div>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous">
+    </script>
+
+    <script>
+        // ============================================================
+        //  DATA LAYER
+        // ============================================================
+        let studentDB = {};
+        let qrDataList = [];
+        let scanLogs = [];
+        let currentScannedId = null;
+        let generatedQRCodes = []; // store QR code objects for PDF
+
+        // ============================================================
+        //  FILE UPLOAD
+        // ============================================================
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = this.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    // Parse data - look for columns with Name, Branch, Mobile
+                    let students = [];
+                    let headerRow = null;
+                    let nameIdx = -1,
+                        branchIdx = -1,
+                        mobileIdx = -1;
+
+                    // Find header row
+                    for (let i = 0; i < Math.min(5, jsonData.length); i++) {
+                        const row = jsonData[i];
+                        if (row && row.length > 0) {
+                            const rowStr = row.join(' ').toLowerCase();
+                            if (rowStr.includes('name') || rowStr.includes('student')) {
+                                headerRow = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (headerRow !== null) {
+                        const headers = jsonData[headerRow].map(h => String(h).toLowerCase().trim());
+                        nameIdx = headers.findIndex(h => h.includes('name') || h.includes('student'));
+                        branchIdx = headers.findIndex(h => h.includes('branch') || h.includes('dept'));
+                        mobileIdx = headers.findIndex(h => h.includes('mobile') || h.includes('phone') || h.includes(
+                        'contact'));
+
+                        // If not found, try to guess by position
+                        if (nameIdx === -1 && jsonData[headerRow].length >= 3) {
+                            nameIdx = 0;
+                            branchIdx = 1;
+                            mobileIdx = 2;
+                        }
+                    } else {
+                        // No header, assume columns: Name, Branch, Mobile
+                        nameIdx = 0;
+                        branchIdx = 1;
+                        mobileIdx = 2;
+                        headerRow = -1;
+                    }
+
+                    // Extract data
+                    for (let i = headerRow + 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue;
+                        const name = row[nameIdx]?.toString().trim() || '';
+                        const branch = row[branchIdx]?.toString().trim() || '';
+                        const mobile = row[mobileIdx]?.toString().trim() || '';
+                        if (name) {
+                            students.push({ name, branch, mobile });
+                        }
+                    }
+
+                    if (students.length === 0) {
+                        document.getElementById('uploadStatus').textContent = '❌ No valid data found in file.';
+                        document.getElementById('uploadStatus').style.color = '#ff6b6b';
+                        return;
+                    }
+
+                    // Populate textarea
+                    const textarea = document.getElementById('studentData');
+                    textarea.value = students.map(s => `${s.name}, ${s.branch}, ${s.mobile}`).join('\n');
+                    document.getElementById('uploadStatus').textContent = `✅ Loaded ${students.length} students from file!`;
+                    document.getElementById('uploadStatus').style.color = '#7ddfb0';
+
+                    // Auto-generate QR codes
+                    generateQRs();
+
+                } catch (err) {
+                    console.error('File read error:', err);
+                    document.getElementById('uploadStatus').textContent = '❌ Error reading file: ' + err.message;
+                    document.getElementById('uploadStatus').style.color = '#ff6b6b';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Drag and drop support
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#ffb347';
+        });
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.style.borderColor = '#2a4058';
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '#2a4058';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                document.getElementById('fileInput').dispatchEvent(new Event('change'));
+            }
+        });
+
+        // ============================================================
+        //  QR GENERATION
+        // ============================================================
+        function generateQRs() {
+            const text = document.getElementById('studentData').value;
+            const lines = text.split('\n').filter(l => l.trim() !== '');
+            if (lines.length === 0) {
+                alert('Please enter at least one student.');
+                return;
+            }
+
+            const students = [];
+            lines.forEach((line, idx) => {
+                const parts = line.split(',').map(s => s.trim());
+                if (parts.length >= 3) {
+                    const [name, branch, mobile] = parts;
+                    const id = `STU-${String(idx + 1).padStart(3, '0')}`;
+                    students.push({ id, name, branch, mobile });
+                }
+            });
+
+            if (students.length === 0) {
+                alert('No valid data found. Use: Name, Branch, Mobile');
+                return;
+            }
+
+            // Clear previous
+            qrDataList = [];
+            studentDB = {};
+            generatedQRCodes = [];
+            document.getElementById('qrGridContainer').innerHTML = '';
+
+            const container = document.getElementById('qrGridContainer');
+            students.forEach((s) => {
+                studentDB[s.id] = {
+                    name: s.name,
+                    branch: s.branch,
+                    mobile: s.mobile,
+                    entryUsed: false,
+                    foodUsed: false,
+                    entryTime: null,
+                    foodTime: null
+                };
+
+                const qrPayload = JSON.stringify({ id: s.id, name: s.name, branch: s.branch, mobile: s.mobile });
+
+                const div = document.createElement('div');
+                div.className = 'qr-item';
+                div.dataset.id = s.id;
+
+                const qrDiv = document.createElement('div');
+                qrDiv.id = `qr-${s.id}`;
+                div.appendChild(qrDiv);
+
+                const label = document.createElement('div');
+                label.className = 'qr-label';
+                label.innerHTML = `<strong>${s.name}</strong>${s.branch}<br>${s.mobile}`;
+                div.appendChild(label);
+
+                // Status badge
+                const badge = document.createElement('div');
+                badge.className = 'badge-status badge-available';
+                badge.textContent = '⬜ Available';
+                badge.id = `badge-${s.id}`;
+                div.appendChild(badge);
+
+                container.appendChild(div);
+
+                const qr = new QRCode(qrDiv, {
+                    text: qrPayload,
+                    width: 110,
+                    height: 110,
+                    colorDark: "#0a1628",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                qrDataList.push({ id: s.id, name: s.name, branch: s.branch, mobile: s.mobile });
+                generatedQRCodes.push({ id: s.id, name: s.name, branch: s.branch, mobile: s.mobile, qrElement: qrDiv });
+            });
+
+            updateStats();
+            addLog('system', `Generated ${qrDataList.length} QR codes`);
+        }
+
+        function updateStats() {
+            document.getElementById('qrCount').textContent = qrDataList.length;
+            document.getElementById('totalStudents').textContent = qrDataList.length;
+
+            let available = 0,
+                used = 0;
+            Object.values(studentDB).forEach(s => {
+                if (s.entryUsed || s.foodUsed) used++;
+                else available++;
+            });
+            document.getElementById('availableCount').textContent = available;
+            document.getElementById('usedCount').textContent = used;
+        }
+
+        function updateQRBadge(id) {
+            const s = studentDB[id];
+            if (!s) return;
+            const badge = document.getElementById(`badge-${id}`);
+            if (!badge) return;
+
+            if (s.entryUsed && s.foodUsed) {
+                badge.className = 'badge-status badge-both';
+                badge.textContent = '✅✅ Both used';
+            } else if (s.entryUsed) {
+                badge.className = 'badge-status badge-used';
+                badge.textContent = '✅ Entry used';
+            } else {
+                badge.className = 'badge-status badge-available';
+                badge.textContent = '⬜ Available';
+            }
+        }
+
+        // ============================================================
+        //  PDF EXPORT - 20 QR PER PAGE
+        // ============================================================
+        async function generatePDF(qrsPerPage = 20) {
+            if (qrDataList.length === 0) {
+                alert('No QR codes to export. Generate some first!');
+                return null;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            // Calculate grid dimensions
+            const cols = Math.ceil(Math.sqrt(qrsPerPage));
+            const rows = Math.ceil(qrsPerPage / cols);
+            const margin = 8;
+            const qrSize = (pageWidth - margin * 2 - (cols - 1) * 4) / cols;
+            const labelHeight = 10;
+
+            // Get all QR items
+            const items = document.querySelectorAll('.qr-item');
+            const itemArray = Array.from(items);
+
+            const totalPages = Math.ceil(itemArray.length / qrsPerPage);
+
+            for (let page = 0; page < totalPages; page++) {
+                if (page > 0) pdf.addPage();
+
+                // Header
+                pdf.setFontSize(14);
+                pdf.setTextColor(30, 30, 50);
+                pdf.text('Farewell Party - Student QR Codes', pageWidth / 2, 10, { align: 'center' });
+                pdf.setFontSize(8);
+                pdf.setTextColor(100, 100, 120);
+                pdf.text(`Page ${page + 1} of ${totalPages} | Total: ${itemArray.length} students`, pageWidth / 2, 16,
+                { align: 'center' });
+
+                const startIdx = page * qrsPerPage;
+                const endIdx = Math.min(startIdx + qrsPerPage, itemArray.length);
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const item = itemArray[i];
+                    const idxInPage = i - startIdx;
+                    const col = idxInPage % cols;
+                    const row = Math.floor(idxInPage / cols);
+
+                    const x = margin + col * (qrSize + 4);
+                    const y = 22 + row * (qrSize + labelHeight + 4);
+
+                    // Get QR canvas from the item
+                    const canvas = item.querySelector('canvas');
+                    if (canvas) {
+                        try {
+                            const imgData = canvas.toDataURL('image/png');
+                            pdf.addImage(imgData, 'PNG', x, y, qrSize, qrSize);
+
+                            // Add label below QR
+                            const label = item.querySelector('.qr-label strong');
+                            const branchLabel = item.querySelector('.qr-label');
+                            const name = label ? label.textContent : 'Student';
+                            const branch = branchLabel ? branchLabel.textContent.replace(name, '').trim() : '';
+
+                            pdf.setFontSize(7);
+                            pdf.setTextColor(50, 50, 70);
+                            const labelY = y + qrSize + 2;
+                            pdf.text(name, x + qrSize / 2, labelY, { align: 'center', maxWidth: qrSize });
+                            pdf.setFontSize(6);
+                            pdf.setTextColor(100, 100, 120);
+                            pdf.text(branch.substring(0, 20), x + qrSize / 2, labelY + 4, { align: 'center',
+                                maxWidth: qrSize });
+                        } catch (err) {
+                            console.warn('Error adding QR to PDF:', err);
+                        }
+                    }
+                }
+            }
+
+            return pdf;
+        }
+
+        async function downloadPDF() {
+            const qrsPerPage = parseInt(document.getElementById('qrsPerPage').value) || 20;
+            const pdf = await generatePDF(qrsPerPage);
+            if (pdf) {
+                pdf.save(`farewell_qr_codes_${new Date().toISOString().slice(0,10)}.pdf`);
+                addLog('system', `PDF downloaded (${qrDataList.length} QRs, ${qrsPerPage} per page)`);
+            }
+        }
+
+        // ============================================================
+        //  PDF PREVIEW
+        // ============================================================
+        async function previewPDF() {
+            const qrsPerPage = parseInt(document.getElementById('qrsPerPage').value) || 20;
+            const pdf = await generatePDF(qrsPerPage);
+            if (!pdf) return;
+
+            const modal = document.getElementById('pdfModal');
+            const grid = document.getElementById('pdfPreviewGrid');
+            grid.innerHTML = '';
+
+            // Render preview pages as images
+            const totalPages = pdf.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'pdf-page-preview';
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 282; // A4 ratio
+                const ctx = canvas.getContext('2d');
+
+                // Render page to canvas using jsPDF's internal
+                // We'll use a simpler approach: render the QR grid directly
+                // For preview, we'll show a simplified version
+                try {
+                    const pageData = pdf.getPage(i);
+                    // Simpler: show a placeholder with page number
+                    ctx.fillStyle = '#0d1b2d';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#e8edf2';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Page ${i} of ${totalPages}`, canvas.width / 2, canvas.height / 2 - 10);
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#9ab3cc';
+                    ctx.fillText(`${qrDataList.length} QR codes`, canvas.width / 2, canvas.height / 2 + 30);
+                } catch (err) {
+                    console.warn('Preview error:', err);
+                }
+
+                pageDiv.appendChild(canvas);
+                const pageNum = document.createElement('div');
+                pageNum.className = 'page-num';
+                pageNum.textContent = `Page ${i}`;
+                pageDiv.appendChild(pageNum);
+                grid.appendChild(pageDiv);
+            }
+
+            modal.style.display = 'block';
+            // Store PDF for download
+            modal.dataset.pdf = pdf;
+        }
+
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('pdfModal').style.display = 'none';
+        });
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('pdfModal').style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('pdfModal')) {
+                document.getElementById('pdfModal').style.display = 'none';
+            }
+        });
+
+        document.getElementById('downloadPdfFromPreview').addEventListener('click', function() {
+            const modal = document.getElementById('pdfModal');
+            const pdf = modal.dataset.pdf;
+            if (pdf) {
+                pdf.save(`farewell_qr_codes_${new Date().toISOString().slice(0,10)}.pdf`);
+                addLog('system', 'PDF downloaded from preview');
+            }
+            modal.style.display = 'none';
+        });
+
+        // ============================================================
+        //  SCANNER
+        // ============================================================
+        let html5QrCode = null;
+        let isScannerRunning = false;
+
+        function startScanner() {
+            const readerElement = document.getElementById('qr-reader');
+            while (readerElement.firstChild) {
+                readerElement.removeChild(readerElement.firstChild);
+            }
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    initScanner();
+                }).catch(() => {
+                    initScanner();
+                });
+            } else {
+                initScanner();
+            }
+        }
+
+        function initScanner() {
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 15, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
+
+            html5QrCode.start({ facingMode: "environment" }, config,
+                (decodedText) => {
+                    handleScan(decodedText);
+                },
+                (error) => { /* ignore */ }
+            ).then(() => {
+                isScannerRunning = true;
+                document.getElementById('scannerStatus').textContent = '✅ Scanner active';
+            }).catch((err) => {
+                document.getElementById('scannerStatus').textContent = '❌ Camera error: ' + err.message;
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && isScannerRunning) {
+                html5QrCode.stop().then(() => {
+                    isScannerRunning = false;
+                    document.getElementById('scannerStatus').textContent = '⏹️ Scanner stopped';
+                }).catch(() => {});
+            }
+        }
+
+        // ============================================================
+        //  HANDLE SCAN
+        // ============================================================
+        function handleScan(payload) {
+            try {
+                const data = JSON.parse(payload);
+                const { id, name, branch, mobile } = data;
+
+                if (!studentDB[id]) {
+                    studentDB[id] = {
+                        name: name || 'Unknown',
+                        branch: branch || '—',
+                        mobile: mobile || '—',
+                        entryUsed: false,
+                        foodUsed: false,
+                        entryTime: null,
+                        foodTime: null
+                    };
+                    // Add to QR list if not exists
+                    if (!qrDataList.find(s => s.id === id)) {
+                        qrDataList.push({ id, name, branch, mobile });
+                        updateStats();
+                    }
+                }
+
+                const student = studentDB[id];
+                currentScannedId = id;
+
+                let action = null;
+                let actionType = null;
+
+                if (!student.entryUsed) {
+                    student.entryUsed = true;
+                    student.entryTime = new Date().toISOString();
+                    action = 'entry';
+                    actionType = 'Entry';
+                    addLog('entry', `${student.name} (${id}) - ENTRY ✅`);
+                } else if (!student.foodUsed) {
+                    student.foodUsed = true;
+                    student.foodTime = new Date().toISOString();
+                    action = 'food';
+                    actionType = 'Food';
+                    addLog('food', `${student.name} (${id}) - FOOD ✅`);
+                } else {
+                    addLog('error', `⚠️ ${student.name} (${id}) - Both used!`);
+                    showScanResult(student, 'both_used');
+                    return;
+                }
+
+                showScanResult(student, action);
+                updateQRBadge(id);
+                updateStats();
+
+            } catch (e) {
+                console.warn('Invalid QR:', payload);
+                addLog('error', `❌ Invalid QR: ${payload.substring(0, 30)}...`);
+            }
+        }
+
+        function showScanResult(student, status) {
+            document.getElementById('scanPlaceholder').classList.add('hidden');
+            document.getElementById('scanInfo').classList.remove('hidden');
+
+            document.getElementById('scanName').textContent = student.name || 'Unknown';
+            document.getElementById('scanBranch').textContent = student.branch || '—';
+            document.getElementById('scanMobile').textContent = `📱 ${student.mobile || '—'}`;
+
+            const entryBadge = document.getElementById('scanEntryBadge');
+            const foodBadge = document.getElementById('scanFoodBadge');
+
+            entryBadge.innerHTML = student.entryUsed ?
+                `🚪 Entry: ✅ ${student.entryTime ? new Date(student.entryTime).toLocaleTimeString() : ''}` :
+                '🚪 Entry: ⬜ Available';
+            entryBadge.style.background = student.entryUsed ? '#1a4a3a' : '#1f3447';
+
+            foodBadge.innerHTML = student.foodUsed ?
+                `🍽️ Food: ✅ ${student.foodTime ? new Date(student.foodTime).toLocaleTimeString() : ''}` :
+                '🍽️ Food: ⬜ Available';
+            foodBadge.style.background = student.foodUsed ? '#1a4a3a' : '#1f3447';
+
+            const timeLog = document.getElementById('scanTimeLog');
+            let logText = '';
+            if (student.entryTime) logText += `Entry: ${new Date(student.entryTime).toLocaleString()}`;
+            if (student.foodTime) logText += ` | Food: ${new Date(student.foodTime).toLocaleString()}`;
+            timeLog.textContent = logText || 'No scans yet';
+        }
+
+        // ============================================================
+        //  MANUAL ENTRY / FOOD
+        // ============================================================
+        function manualMark(action) {
+            if (!currentScannedId || !studentDB[currentScannedId]) {
+                alert('Please scan a QR code first.');
+                return;
+            }
+            const student = studentDB[currentScannedId];
+            if (action === 'entry' && !student.entryUsed) {
+                student.entryUsed = true;
+                student.entryTime = new Date().toISOString();
+                addLog('entry', `🔧 Manual ENTRY: ${student.name}`);
+                showScanResult(student, 'entry');
+                updateQRBadge(currentScannedId);
+                updateStats();
+            } else if (action === 'food' && !student.foodUsed) {
+                student.foodUsed = true;
+                student.foodTime = new Date().toISOString();
+                addLog('food', `🔧 Manual FOOD: ${student.name}`);
+                showScanResult(student, 'food');
+                updateQRBadge(currentScannedId);
+                updateStats();
+            } else {
+                alert(`❌ ${action} already used for this student.`);
+            }
+        }
+
+        // ============================================================
+        //  LOGS
+        // ============================================================
+        function addLog(type, message) {
+            const timestamp = new Date().toLocaleString();
+            scanLogs.push({ timestamp, type, message });
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const logDiv = document.getElementById('logDisplay');
+            document.getElementById('logCount').textContent = scanLogs.length;
+
+            if (scanLogs.length === 0) {
+                logDiv.textContent = '📭 No logs yet.';
+                return;
+            }
+
+            let html = '';
+            scanLogs.slice().reverse().forEach(log => {
+                let cls = '';
+                if (log.type === 'entry') cls = 'entry-log';
+                else if (log.type === 'food') cls = 'food-log';
+                else if (log.type === 'error') cls = 'error-log';
+                html += `<div class="${cls}">[${log.timestamp}] ${log.message}</div>`;
+            });
+            logDiv.innerHTML = html;
+        }
+
+        function exportCSV() {
+            if (scanLogs.length === 0) { alert('No logs to export.'); return; }
+            let csv = 'Timestamp,Type,Message\n';
+            scanLogs.forEach(log => {
+                csv += `"${log.timestamp}","${log.type}","${log.message.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `farewell_logs_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyLogs() {
+            const text = scanLogs.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
+            navigator.clipboard.writeText(text).then(() => alert('Logs copied!')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                alert('Logs copied!');
+            });
+        }
+
+        function clearLogs() {
+            if (confirm('Clear all logs?')) {
+                scanLogs = [];
+                renderLogs();
+                addLog('system', '🧹 Logs cleared');
+            }
+        }
+
+        // ============================================================
+        //  UI HELPERS
+        // ============================================================
+        function loadSample() {
+            const sample = `Aarav Sharma, CSE, 9876543210
+Priya Patel, ECE, 9876543211
+Rahul Verma, ME, 9876543212
+Sneha Reddy, Civil, 9876543213
+Arjun Nair, CSE, 9876543214
+Kavya Menon, Chemical, 9876543215
+Vikram Singh, IT, 9876543216
+Ananya Iyer, Biotech, 9876543217
+Rohit Gupta, ECE, 9876543218
+Neha Joshi, ME, 9876543219
+Deepak Kumar, CSE, 9876543220
+Pooja Desai, Civil, 9876543221
+Suresh Babu, IT, 9876543222
+Meera Nair, Biotech, 9876543223
+Kiran Raj, Chemical, 9876543224
+Divya Menon, CSE, 9876543225
+Aditya Singh, ECE, 9876543226
+Lakshmi Reddy, ME, 9876543227
+Naveen Kumar, Civil, 9876543228
+Shreya Sharma, IT, 9876543229`;
+            document.getElementById('studentData').value = sample;
+            generateQRs();
+        }
+
+        function clearQRs() {
+            if (qrDataList.length > 0 && !confirm('Clear all QR codes?')) return;
+            qrDataList = [];
+            studentDB = {};
+            generatedQRCodes = [];
+            document.getElementById('qrGridContainer').innerHTML = '';
+            updateStats();
+            addLog('system', '🧹 Cleared all QR codes');
+        }
+
+        // ============================================================
+        //  TAB SWITCHING
+        // ============================================================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ============================================================
+        //  EVENT BINDINGS
+        // ============================================================
+        document.getElementById('generateBtn').addEventListener('click', generateQRs);
+        document.getElementById('pdfBtn').addEventListener('click', downloadPDF);
+        document.getElementById('previewPdfBtn').addEventListener('click', previewPDF);
+        document.getElementById('printBtn').addEventListener('click', () => window.print());
+        document.getElementById('sampleBtn').addEventListener('click', loadSample);
+        document.getElementById('clearQrBtn').addEventListener('click', clearQRs);
+        document.getElementById('startScannerBtn').addEventListener('click', startScanner);
+        document.getElementById('stopScannerBtn').addEventListener('click', stopScanner);
+        document.getElementById('manualEntryBtn').addEventListener('click', () => manualMark('entry'));
+        document.getElementById('manualFoodBtn').addEventListener('click', () => manualMark('food'));
+        document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+        document.getElementById('copyLogsBtn').addEventListener('click', copyLogs);
+        document.getElementById('clearLogsBtn').addEventListener('click', clearLogs);
+
+        // ============================================================
+        //  INIT
+        // ============================================================
+        addLog('system', '🚀 App ready. Upload sheet or generate QR codes.');
+        setTimeout(() => {
+            loadSample();
+        }, 300);
+
+        console.log('✅ QR Generator Pro loaded. Student DB:', studentDB);
+    </script>
+</body>
+</html>
