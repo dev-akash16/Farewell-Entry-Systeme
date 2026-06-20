@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Farewell Entry + Food Scanner with Google Sheets</title>
+    <title>Farewell Entry + Food Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
@@ -537,6 +537,16 @@
             color: #9ab3cc;
             border: 1px solid #2a4058;
         }
+        .sheet-url-display {
+            background: #0a1622;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 12px;
+            color: #7ddfb0;
+            border: 1px solid #1a4a3a;
+            word-break: break-all;
+            margin: 4px 0;
+        }
     </style>
 </head>
 <body>
@@ -648,17 +658,21 @@
         <div id="tab-logs" class="tab-content">
             <div class="sheet-config">
                 <label>📊 Google Sheets Web App URL</label>
-                <input type="url" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+                <div class="sheet-url-display">
+                    <i class="fas fa-link"></i> Connected to: 
+                    <span id="sheetUrlDisplay">https://script.google.com/macros/s/AKfycbxKO9Lsuw89qPX8rh7b0Hz5yJv7CxdLacCdaZfbDOXwXTT7mL5ANZSgwgSd34P-EnQe/exec</span>
+                </div>
+                <input type="hidden" id="sheetUrl" value="https://script.google.com/macros/s/AKfycbxKO9Lsuw89qPX8rh7b0Hz5yJv7CxdLacCdaZfbDOXwXTT7mL5ANZSgwgSd34P-EnQe/exec" />
                 <div class="small-note">
-                    Deploy a Google Apps Script as a web app and paste the URL here.
-                    <button class="btn btn-secondary" id="showScriptGuide" style="padding:4px 12px; font-size:12px; margin:0;">
+                    <i class="fas fa-check-circle" style="color:#7ddfb0;"></i> Auto-connected to Google Sheets
+                    <button class="btn btn-secondary" id="showScriptGuide" style="padding:4px 12px; font-size:12px; margin:0 0 0 8px;">
                         📖 View Script Guide
                     </button>
                 </div>
                 <div class="flex-row">
                     <button class="btn btn-info" id="testSheetBtn"><i class="fas fa-check-circle"></i> Test Connection</button>
                     <button class="btn btn-success" id="syncAllBtn"><i class="fas fa-cloud-upload-alt"></i> Sync All Logs</button>
-                    <span id="syncStatus" class="sync-status pending">⏳ Not connected</span>
+                    <span id="syncStatus" class="sync-status success">✅ Connected</span>
                 </div>
             </div>
 
@@ -696,6 +710,11 @@
     </script>
 
     <script>
+        // ============================================================
+        //  CONFIGURATION - Your Google Sheets URL
+        // ============================================================
+        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxKO9Lsuw89qPX8rh7b0Hz5yJv7CxdLacCdaZfbDOXwXTT7mL5ANZSgwgSd34P-EnQe/exec';
+        
         // ============================================================
         //  DATA LAYER WITH PERSISTENCE
         // ============================================================
@@ -747,7 +766,6 @@
 
         // Restore UI from persisted data
         function restoreUIFromData() {
-            // Restore QR grid
             const container = document.getElementById('qrGridContainer');
             container.innerHTML = '';
 
@@ -778,7 +796,6 @@
 
                 container.appendChild(div);
 
-                // Regenerate QR code
                 const qrPayload = JSON.stringify({ id: s.id, name: s.name, branch: s.branch, mobile: s.mobile });
                 try {
                     new QRCode(qrDiv, {
@@ -793,7 +810,6 @@
                     console.warn('QR regen error:', err);
                 }
 
-                // Update badge
                 updateQRBadge(s.id);
             });
 
@@ -805,8 +821,12 @@
         // ============================================================
         //  GOOGLE SHEETS INTEGRATION
         // ============================================================
+        function getSheetUrl() {
+            return document.getElementById('sheetUrl').value.trim() || GOOGLE_SHEETS_URL;
+        }
+
         async function syncToGoogleSheets(studentId, student, action, actionType) {
-            const url = document.getElementById('sheetUrl').value.trim();
+            const url = getSheetUrl();
             if (!url) {
                 addLog('error', '⚠️ Google Sheets URL not configured');
                 return false;
@@ -845,9 +865,9 @@
         }
 
         async function syncAllLogsToSheet() {
-            const url = document.getElementById('sheetUrl').value.trim();
+            const url = getSheetUrl();
             if (!url) {
-                showToast('⚠️ Please configure Google Sheets URL first');
+                showToast('⚠️ Google Sheets URL not configured');
                 return;
             }
 
@@ -881,9 +901,9 @@
         }
 
         async function testSheetConnection() {
-            const url = document.getElementById('sheetUrl').value.trim();
+            const url = getSheetUrl();
             if (!url) {
-                showToast('⚠️ Please enter a Google Sheets URL');
+                showToast('⚠️ Google Sheets URL not configured');
                 return;
             }
 
@@ -1212,7 +1232,6 @@
                     actionType = 'Entry';
                     addLog('entry', `🚪 ${student.name} (${id}) - ENTRY ✅`);
                     showToast(`✅ ${student.name} - Entry marked!`);
-                    // Sync to Google Sheets
                     syncToGoogleSheets(id, student, action, actionType);
                 } else if (!student.foodUsed) {
                     student.foodUsed = true;
@@ -1221,7 +1240,6 @@
                     actionType = 'Food';
                     addLog('food', `🍽️ ${student.name} (${id}) - FOOD ✅`);
                     showToast(`✅ ${student.name} - Food marked!`);
-                    // Sync to Google Sheets
                     syncToGoogleSheets(id, student, action, actionType);
                 } else {
                     addLog('error', `⚠️ ${student.name} (${id}) - Both already used!`);
@@ -1656,11 +1674,19 @@ function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   
+  // Add headers if empty
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['Timestamp', 'Student ID', 'Name', 'Branch', 'Mobile', 
+      'Action', 'Action Type', 'Entry Used', 'Food Used', 'Entry Time', 'Food Time']);
+  }
+  
+  // Test connection
   if (data.test) {
     sheet.appendRow(['TEST', data.message, data.timestamp]);
     return ContentService.createTextOutput(JSON.stringify({status:'ok'}));
   }
   
+  // Sync all logs
   if (data.syncAll) {
     data.logs.forEach(log => {
       sheet.appendRow([log.timestamp, log.type, log.message]);
@@ -1668,14 +1694,15 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({status:'ok'}));
   }
   
+  // Regular scan entry
   const row = [
+    data.timestamp || new Date().toISOString(),
     data.studentId || '',
     data.name || '',
     data.branch || '',
     data.mobile || '',
     data.action || '',
     data.actionType || '',
-    data.timestamp || '',
     data.entryUsed || false,
     data.foodUsed || false,
     data.entryTime || '',
@@ -1686,32 +1713,36 @@ function doPost(e) {
 }
 
 4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
-5. Copy the web app URL and paste it in the field above.`
+5. The URL is already integrated in the app!`
             );
         });
 
         // ============================================================
         //  INIT
         // ============================================================
+        // Set the sheet URL display
+        document.getElementById('sheetUrlDisplay').textContent = GOOGLE_SHEETS_URL;
+        document.getElementById('sheetUrl').value = GOOGLE_SHEETS_URL;
+
         // Load persisted data first
         const hasData = loadPersistedData();
 
         if (hasData && Object.keys(studentDB).length > 0) {
-            // Restore UI from data
             restoreUIFromData();
             addLog('system', `🔄 Restored ${qrDataList.length} QR codes from local storage`);
             showToast(`🔄 Restored ${qrDataList.length} QR codes from local storage`);
         } else {
-            // Load sample data
-            addLog('system', '🚀 App ready!');
+            addLog('system', '🚀 App ready! Connected to Google Sheets');
             setTimeout(() => { loadSample(); }, 300);
         }
 
-        console.log('✅ Farewell Scanner loaded with persistence. Data:', {
-            students: Object.keys(studentDB).length,
-            qrs: qrDataList.length,
-            logs: scanLogs.length
-        });
+        // Test connection on startup
+        setTimeout(() => {
+            testSheetConnection();
+        }, 1000);
+
+        console.log('✅ Farewell Scanner loaded with Google Sheets integration.');
+        console.log('📊 Google Sheets URL:', GOOGLE_SHEETS_URL);
     </script>
 </body>
 </html>
