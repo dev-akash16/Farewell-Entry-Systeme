@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Farewell Entry + Food Scanner</title>
+    <title>Farewell Entry + Food Scanner with Google Sheets</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
@@ -64,7 +64,8 @@
         }
         textarea,
         input[type="text"],
-        input[type="file"] {
+        input[type="file"],
+        input[type="url"] {
             width: 100%;
             padding: 10px 14px;
             border-radius: 14px;
@@ -129,6 +130,14 @@
         }
         .btn-danger:hover {
             background: #f05a4a;
+        }
+        .btn-info {
+            background: #3498db;
+            color: #fff;
+            border-color: #5dade2;
+        }
+        .btn-info:hover {
+            background: #5dade2;
         }
         .flex-row {
             display: flex;
@@ -315,6 +324,9 @@
         .log-area .error-log {
             color: #ff6b6b;
         }
+        .log-area .sync-log {
+            color: #5dade2;
+        }
         .page-size-selector {
             display: flex;
             gap: 10px;
@@ -463,12 +475,6 @@
             font-size: 12px;
             margin-top: 4px;
         }
-        .scan-success {
-            border-left: 4px solid #2ecc71 !important;
-        }
-        .scan-error {
-            border-left: 4px solid #e74c3c !important;
-        }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -494,18 +500,55 @@
                 opacity: 1;
             }
         }
+        .sheet-config {
+            background: #0d1b2d;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid #1f3447;
+            margin: 10px 0;
+        }
+        .sheet-config input {
+            background: #0a1622;
+        }
+        .sync-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .sync-status.success {
+            background: #1a4a3a;
+            color: #7ddfb0;
+        }
+        .sync-status.error {
+            background: #4a1a1a;
+            color: #ff6b6b;
+        }
+        .sync-status.pending {
+            background: #4a3a1a;
+            color: #ffd966;
+        }
+        .data-persist-note {
+            background: #1a2a3a;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 12px;
+            color: #9ab3cc;
+            border: 1px solid #2a4058;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1><i class="fas fa-qrcode"></i> Farewell Entry + Food</h1>
-        <div class="sub">📤 Upload sheet · Generate QR · Scan for Entry (1st) & Food (2nd)</div>
+        <div class="sub">📤 Upload sheet · Generate QR · Scan for Entry (1st) & Food (2nd) · Auto-sync to Google Sheets</div>
 
         <div class="tab-bar no-print">
             <button class="tab-btn active" data-tab="tab-generate">📱 Generate QR</button>
             <button class="tab-btn" data-tab="tab-scan">📷 Scanner</button>
-            <button class="tab-btn" data-tab="tab-logs">📊 Logs</button>
+            <button class="tab-btn" data-tab="tab-logs">📊 Logs & Sheets</button>
         </div>
 
         <!-- TAB 1: GENERATE -->
@@ -525,30 +568,12 @@
                     <div id="uploadStatus" style="color:#7ddfb0; margin-top:6px; font-size:13px;"></div>
 
                     <label>📝 Or paste data manually</label>
-                    <textarea id="studentData" placeholder="Name, Branch, Mobile">Aarav Sharma, CSE, 9876543210
-Priya Patel, ECE, 9876543211
-Rahul Verma, ME, 9876543212
-Sneha Reddy, Civil, 9876543213
-Arjun Nair, CSE, 9876543214
-Kavya Menon, Chemical, 9876543215
-Vikram Singh, IT, 9876543216
-Ananya Iyer, Biotech, 9876543217
-Rohit Gupta, ECE, 9876543218
-Neha Joshi, ME, 9876543219
-Deepak Kumar, CSE, 9876543220
-Pooja Desai, Civil, 9876543221
-Suresh Babu, IT, 9876543222
-Meera Nair, Biotech, 9876543223
-Kiran Raj, Chemical, 9876543224
-Divya Menon, CSE, 9876543225
-Aditya Singh, ECE, 9876543226
-Lakshmi Reddy, ME, 9876543227
-Naveen Kumar, Civil, 9876543228
-Shreya Sharma, IT, 9876543229</textarea>
+                    <textarea id="studentData" placeholder="Name, Branch, Mobile"></textarea>
                     <div class="small-note">Format: <strong>Name, Branch, Mobile</strong> (comma separated)</div>
                     <div class="flex-row">
                         <button class="btn" id="generateBtn"><i class="fas fa-qrcode"></i> Generate QR</button>
                         <button class="btn btn-secondary" id="sampleBtn"><i class="fas fa-plus"></i> Load 20 Sample</button>
+                        <button class="btn btn-secondary" id="sample150Btn"><i class="fas fa-plus"></i> Load 150 Sample</button>
                         <button class="btn btn-danger" id="clearQrBtn"><i class="fas fa-trash"></i> Clear</button>
                     </div>
                 </div>
@@ -568,6 +593,7 @@ Shreya Sharma, IT, 9876543229</textarea>
                             <option value="20" selected>20</option>
                             <option value="24">24</option>
                             <option value="30">30</option>
+                            <option value="35">35</option>
                         </select>
                     </div>
                     <div class="flex-row">
@@ -618,14 +644,33 @@ Shreya Sharma, IT, 9876543229</textarea>
             </div>
         </div>
 
-        <!-- TAB 3: LOGS -->
+        <!-- TAB 3: LOGS & SHEETS -->
         <div id="tab-logs" class="tab-content">
-            <label>📋 Scan Logs (<span id="logCount">0</span>)</label>
+            <div class="sheet-config">
+                <label>📊 Google Sheets Web App URL</label>
+                <input type="url" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+                <div class="small-note">
+                    Deploy a Google Apps Script as a web app and paste the URL here.
+                    <button class="btn btn-secondary" id="showScriptGuide" style="padding:4px 12px; font-size:12px; margin:0;">
+                        📖 View Script Guide
+                    </button>
+                </div>
+                <div class="flex-row">
+                    <button class="btn btn-info" id="testSheetBtn"><i class="fas fa-check-circle"></i> Test Connection</button>
+                    <button class="btn btn-success" id="syncAllBtn"><i class="fas fa-cloud-upload-alt"></i> Sync All Logs</button>
+                    <span id="syncStatus" class="sync-status pending">⏳ Not connected</span>
+                </div>
+            </div>
+
+            <div class="flex-row" style="justify-content:space-between;">
+                <label>📋 Scan Logs (<span id="logCount">0</span>)</label>
+                <span class="data-persist-note"><i class="fas fa-database"></i> Data persists locally</span>
+            </div>
             <div class="log-area" id="logDisplay">📭 No logs yet.</div>
             <div class="flex-row">
                 <button class="btn btn-secondary" id="exportCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
                 <button class="btn btn-secondary" id="copyLogsBtn"><i class="fas fa-copy"></i> Copy</button>
-                <button class="btn btn-danger" id="clearLogsBtn"><i class="fas fa-eraser"></i> Clear</button>
+                <button class="btn btn-danger" id="clearLogsBtn"><i class="fas fa-eraser"></i> Clear Local Data</button>
             </div>
         </div>
     </div>
@@ -652,15 +697,233 @@ Shreya Sharma, IT, 9876543229</textarea>
 
     <script>
         // ============================================================
-        //  DATA LAYER
+        //  DATA LAYER WITH PERSISTENCE
         // ============================================================
         let studentDB = {};
         let qrDataList = [];
         let scanLogs = [];
         let currentScannedId = null;
-        let isProcessing = false; // CRITICAL: prevents double scans
+        let isProcessing = false;
         let lastScannedTime = 0;
-        const SCAN_COOLDOWN = 2000; // 2 seconds cooldown
+        const SCAN_COOLDOWN = 2000;
+        const STORAGE_KEY = 'farewell_scanner_data';
+
+        // Load data from localStorage on startup
+        function loadPersistedData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    studentDB = data.studentDB || {};
+                    qrDataList = data.qrDataList || [];
+                    scanLogs = data.scanLogs || [];
+                    console.log('✅ Data loaded from localStorage:', {
+                        students: Object.keys(studentDB).length,
+                        qrs: qrDataList.length,
+                        logs: scanLogs.length
+                    });
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Failed to load persisted data:', e);
+            }
+            return false;
+        }
+
+        // Save data to localStorage
+        function persistData() {
+            try {
+                const data = {
+                    studentDB: studentDB,
+                    qrDataList: qrDataList,
+                    scanLogs: scanLogs,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Failed to save data:', e);
+            }
+        }
+
+        // Restore UI from persisted data
+        function restoreUIFromData() {
+            // Restore QR grid
+            const container = document.getElementById('qrGridContainer');
+            container.innerHTML = '';
+
+            if (qrDataList.length === 0) {
+                updateStats();
+                return;
+            }
+
+            const qrSize = 110;
+            qrDataList.forEach((s) => {
+                const div = document.createElement('div');
+                div.className = 'qr-item';
+                div.dataset.id = s.id;
+
+                const qrDiv = document.createElement('div');
+                qrDiv.id = `qr-${s.id}`;
+                div.appendChild(qrDiv);
+
+                const label = document.createElement('div');
+                label.className = 'qr-label';
+                label.innerHTML = `<strong>${s.name}</strong>${s.branch}<br>${s.mobile}`;
+                div.appendChild(label);
+
+                const badge = document.createElement('div');
+                badge.className = 'badge-status';
+                badge.id = `badge-${s.id}`;
+                div.appendChild(badge);
+
+                container.appendChild(div);
+
+                // Regenerate QR code
+                const qrPayload = JSON.stringify({ id: s.id, name: s.name, branch: s.branch, mobile: s.mobile });
+                try {
+                    new QRCode(qrDiv, {
+                        text: qrPayload,
+                        width: qrSize,
+                        height: qrSize,
+                        colorDark: "#0a1628",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (err) {
+                    console.warn('QR regen error:', err);
+                }
+
+                // Update badge
+                updateQRBadge(s.id);
+            });
+
+            updateStats();
+            renderLogs();
+            showToast(`✅ Restored ${qrDataList.length} QR codes from local storage`);
+        }
+
+        // ============================================================
+        //  GOOGLE SHEETS INTEGRATION
+        // ============================================================
+        async function syncToGoogleSheets(studentId, student, action, actionType) {
+            const url = document.getElementById('sheetUrl').value.trim();
+            if (!url) {
+                addLog('error', '⚠️ Google Sheets URL not configured');
+                return false;
+            }
+
+            const payload = {
+                studentId: studentId,
+                name: student.name,
+                branch: student.branch,
+                mobile: student.mobile,
+                action: action,
+                actionType: actionType,
+                timestamp: new Date().toISOString(),
+                entryUsed: student.entryUsed,
+                foodUsed: student.foodUsed,
+                entryTime: student.entryTime,
+                foodTime: student.foodTime
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                addLog('sync', `📤 Synced ${student.name} - ${actionType} to Google Sheets`);
+                updateSyncStatus('success', 'Connected');
+                return true;
+            } catch (err) {
+                console.warn('Sheet sync error:', err);
+                addLog('error', `❌ Failed to sync: ${err.message}`);
+                updateSyncStatus('error', 'Sync failed');
+                return false;
+            }
+        }
+
+        async function syncAllLogsToSheet() {
+            const url = document.getElementById('sheetUrl').value.trim();
+            if (!url) {
+                showToast('⚠️ Please configure Google Sheets URL first');
+                return;
+            }
+
+            if (scanLogs.length === 0) {
+                showToast('⚠️ No logs to sync');
+                return;
+            }
+
+            const payload = {
+                logs: scanLogs,
+                syncAll: true,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                addLog('sync', `📤 Synced all ${scanLogs.length} logs to Google Sheets`);
+                showToast(`✅ Synced ${scanLogs.length} logs to Google Sheets!`);
+                updateSyncStatus('success', 'Connected');
+            } catch (err) {
+                console.warn('Sync all error:', err);
+                addLog('error', `❌ Failed to sync all: ${err.message}`);
+                showToast('❌ Failed to sync logs');
+                updateSyncStatus('error', 'Sync failed');
+            }
+        }
+
+        async function testSheetConnection() {
+            const url = document.getElementById('sheetUrl').value.trim();
+            if (!url) {
+                showToast('⚠️ Please enter a Google Sheets URL');
+                return;
+            }
+
+            const testPayload = {
+                test: true,
+                message: 'Connection test from Farewell Scanner',
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testPayload)
+                });
+                showToast('✅ Connection test sent! Check your Google Sheet.');
+                updateSyncStatus('success', 'Connected');
+                addLog('sync', '✅ Google Sheets connection test successful');
+            } catch (err) {
+                console.warn('Test connection error:', err);
+                showToast('❌ Connection failed: ' + err.message);
+                updateSyncStatus('error', 'Connection failed');
+                addLog('error', '❌ Google Sheets connection test failed');
+            }
+        }
+
+        function updateSyncStatus(status, message) {
+            const el = document.getElementById('syncStatus');
+            if (status === 'success') {
+                el.className = 'sync-status success';
+                el.textContent = '✅ ' + message;
+            } else if (status === 'error') {
+                el.className = 'sync-status error';
+                el.textContent = '❌ ' + message;
+            } else {
+                el.className = 'sync-status pending';
+                el.textContent = '⏳ ' + message;
+            }
+        }
 
         // ============================================================
         //  FILE UPLOAD
@@ -683,7 +946,6 @@ Shreya Sharma, IT, 9876543229</textarea>
                         branchIdx = 1,
                         mobileIdx = 2;
 
-                    // Find header row
                     for (let i = 0; i < Math.min(5, jsonData.length); i++) {
                         const row = jsonData[i];
                         if (row && row.length > 0) {
@@ -694,7 +956,7 @@ Shreya Sharma, IT, 9876543229</textarea>
                                 nameIdx = headers.findIndex(h => h.includes('name') || h.includes('student'));
                                 branchIdx = headers.findIndex(h => h.includes('branch') || h.includes('dept'));
                                 mobileIdx = headers.findIndex(h => h.includes('mobile') || h.includes('phone') ||
-                                h.includes('contact'));
+                                    h.includes('contact'));
                                 if (nameIdx === -1) nameIdx = 0;
                                 if (branchIdx === -1) branchIdx = 1;
                                 if (mobileIdx === -1) mobileIdx = 2;
@@ -819,6 +1081,7 @@ Shreya Sharma, IT, 9876543229</textarea>
 
             updateStats();
             addLog('system', `Generated ${qrDataList.length} QR codes`);
+            persistData();
             showToast(`✅ ${qrDataList.length} QR codes generated!`);
         }
 
@@ -858,7 +1121,7 @@ Shreya Sharma, IT, 9876543229</textarea>
         }
 
         // ============================================================
-        //  SCANNER - FIXED: prevents double scanning
+        //  SCANNER
         // ============================================================
         let html5QrCode = null;
         let isScannerRunning = false;
@@ -885,17 +1148,9 @@ Shreya Sharma, IT, 9876543229</textarea>
 
             html5QrCode.start({ facingMode: "environment" }, config,
                 (decodedText) => {
-                    // CRITICAL FIX: Prevent multiple scans
                     const now = Date.now();
-                    if (isProcessing) {
-                        console.log('⏳ Already processing, skipping...');
-                        return;
-                    }
-                    if (now - lastScannedTime < SCAN_COOLDOWN) {
-                        console.log('⏱️ Cooldown active, skipping...');
-                        return;
-                    }
-
+                    if (isProcessing) return;
+                    if (now - lastScannedTime < SCAN_COOLDOWN) return;
                     handleScan(decodedText);
                 },
                 (error) => { /* ignore */ }
@@ -917,10 +1172,9 @@ Shreya Sharma, IT, 9876543229</textarea>
         }
 
         // ============================================================
-        //  HANDLE SCAN - FIXED: only one action per scan
+        //  HANDLE SCAN
         // ============================================================
         function handleScan(payload) {
-            // CRITICAL: Set processing flag
             if (isProcessing) return;
             isProcessing = true;
             lastScannedTime = Date.now();
@@ -929,7 +1183,6 @@ Shreya Sharma, IT, 9876543229</textarea>
                 const data = JSON.parse(payload);
                 const { id, name, branch, mobile } = data;
 
-                // Validate or create student
                 if (!studentDB[id]) {
                     studentDB[id] = {
                         name: name || 'Unknown',
@@ -949,28 +1202,28 @@ Shreya Sharma, IT, 9876543229</textarea>
                 const student = studentDB[id];
                 currentScannedId = id;
 
-                // Determine which action to take
                 let action = null;
                 let actionType = null;
 
                 if (!student.entryUsed) {
-                    // First scan → Entry
                     student.entryUsed = true;
                     student.entryTime = new Date().toISOString();
                     action = 'entry';
                     actionType = 'Entry';
                     addLog('entry', `🚪 ${student.name} (${id}) - ENTRY ✅`);
                     showToast(`✅ ${student.name} - Entry marked!`);
+                    // Sync to Google Sheets
+                    syncToGoogleSheets(id, student, action, actionType);
                 } else if (!student.foodUsed) {
-                    // Second scan → Food
                     student.foodUsed = true;
                     student.foodTime = new Date().toISOString();
                     action = 'food';
                     actionType = 'Food';
                     addLog('food', `🍽️ ${student.name} (${id}) - FOOD ✅`);
                     showToast(`✅ ${student.name} - Food marked!`);
+                    // Sync to Google Sheets
+                    syncToGoogleSheets(id, student, action, actionType);
                 } else {
-                    // Both already used
                     addLog('error', `⚠️ ${student.name} (${id}) - Both already used!`);
                     showToast(`⚠️ ${student.name} - Both uses already completed!`);
                     showScanResult(student, 'both_used');
@@ -978,12 +1231,11 @@ Shreya Sharma, IT, 9876543229</textarea>
                     return;
                 }
 
-                // Update UI
                 showScanResult(student, action);
                 updateQRBadge(id);
                 updateStats();
+                persistData();
 
-                // Reset processing flag after a delay
                 setTimeout(() => {
                     isProcessing = false;
                 }, 500);
@@ -1007,7 +1259,6 @@ Shreya Sharma, IT, 9876543229</textarea>
             const entryBadge = document.getElementById('scanEntryBadge');
             const foodBadge = document.getElementById('scanFoodBadge');
 
-            // Entry badge
             if (student.entryUsed) {
                 entryBadge.className = 'used';
                 entryBadge.textContent = `🚪 Entry: ✅ ${student.entryTime ? new Date(student.entryTime).toLocaleTimeString() : ''}`;
@@ -1016,7 +1267,6 @@ Shreya Sharma, IT, 9876543229</textarea>
                 entryBadge.textContent = '🚪 Entry: Available';
             }
 
-            // Food badge
             if (student.foodUsed) {
                 foodBadge.className = 'used';
                 foodBadge.textContent = `🍽️ Food: ✅ ${student.foodTime ? new Date(student.foodTime).toLocaleTimeString() : ''}`;
@@ -1025,7 +1275,6 @@ Shreya Sharma, IT, 9876543229</textarea>
                 foodBadge.textContent = '🍽️ Food: Available';
             }
 
-            // Time log
             const timeLog = document.getElementById('scanTimeLog');
             let logText = '';
             if (student.entryTime) logText += `Entry: ${new Date(student.entryTime).toLocaleString()}`;
@@ -1058,6 +1307,7 @@ Shreya Sharma, IT, 9876543229</textarea>
                 student.entryTime = new Date().toISOString();
                 addLog('entry', `🔧 Manual ENTRY: ${student.name}`);
                 showToast(`✅ ${student.name} - Entry marked manually`);
+                syncToGoogleSheets(currentScannedId, student, 'entry', 'Entry');
             } else if (action === 'food') {
                 if (student.foodUsed) {
                     showToast(`⚠️ ${student.name} - Food already used!`);
@@ -1067,15 +1317,17 @@ Shreya Sharma, IT, 9876543229</textarea>
                 student.foodTime = new Date().toISOString();
                 addLog('food', `🔧 Manual FOOD: ${student.name}`);
                 showToast(`✅ ${student.name} - Food marked manually`);
+                syncToGoogleSheets(currentScannedId, student, 'food', 'Food');
             }
 
             showScanResult(student, action);
             updateQRBadge(currentScannedId);
             updateStats();
+            persistData();
         }
 
         // ============================================================
-        //  TOAST NOTIFICATION
+        //  TOAST
         // ============================================================
         function showToast(message) {
             const existing = document.querySelector('.toast');
@@ -1201,28 +1453,6 @@ Shreya Sharma, IT, 9876543229</textarea>
             modal.dataset.pdf = pdf;
         }
 
-        document.getElementById('closeModal').addEventListener('click', () => {
-            document.getElementById('pdfModal').style.display = 'none';
-        });
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            document.getElementById('pdfModal').style.display = 'none';
-        });
-        window.addEventListener('click', (e) => {
-            if (e.target === document.getElementById('pdfModal')) {
-                document.getElementById('pdfModal').style.display = 'none';
-            }
-        });
-
-        document.getElementById('downloadPdfFromPreview').addEventListener('click', function() {
-            const modal = document.getElementById('pdfModal');
-            const pdf = modal.dataset.pdf;
-            if (pdf) {
-                pdf.save(`farewell_qr_codes_${new Date().toISOString().slice(0,10)}.pdf`);
-                addLog('system', 'PDF downloaded from preview');
-            }
-            modal.style.display = 'none';
-        });
-
         // ============================================================
         //  LOGS
         // ============================================================
@@ -1230,6 +1460,7 @@ Shreya Sharma, IT, 9876543229</textarea>
             const timestamp = new Date().toLocaleString();
             scanLogs.push({ timestamp, type, message });
             renderLogs();
+            persistData();
         }
 
         function renderLogs() {
@@ -1247,6 +1478,7 @@ Shreya Sharma, IT, 9876543229</textarea>
                 if (log.type === 'entry') cls = 'entry-log';
                 else if (log.type === 'food') cls = 'food-log';
                 else if (log.type === 'error') cls = 'error-log';
+                else if (log.type === 'sync') cls = 'sync-log';
                 html += `<div class="${cls}">[${log.timestamp}] ${log.message}</div>`;
             });
             logDiv.innerHTML = html;
@@ -1265,6 +1497,7 @@ Shreya Sharma, IT, 9876543229</textarea>
             a.download = `farewell_logs_${new Date().toISOString().slice(0,10)}.csv`;
             a.click();
             URL.revokeObjectURL(url);
+            showToast('📥 CSV exported!');
         }
 
         function copyLogs() {
@@ -1280,11 +1513,17 @@ Shreya Sharma, IT, 9876543229</textarea>
             });
         }
 
-        function clearLogs() {
-            if (confirm('Clear all logs?')) {
+        function clearAllData() {
+            if (confirm('⚠️ This will delete ALL data including QR codes and logs. Continue?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                studentDB = {};
+                qrDataList = [];
                 scanLogs = [];
+                document.getElementById('qrGridContainer').innerHTML = '';
+                updateStats();
                 renderLogs();
-                addLog('system', '🧹 Logs cleared');
+                showToast('🗑️ All data cleared');
+                addLog('system', '🗑️ All data cleared from local storage');
             }
         }
 
@@ -1316,13 +1555,27 @@ Shreya Sharma, IT, 9876543229</textarea>
             generateQRs();
         }
 
-        function clearQRs() {
-            if (qrDataList.length > 0 && !confirm('Clear all QR codes?')) return;
-            qrDataList = [];
-            studentDB = {};
-            document.getElementById('qrGridContainer').innerHTML = '';
-            updateStats();
-            addLog('system', '🧹 Cleared all QR codes');
+        function loadSample150() {
+            let data = '';
+            const branches = ['CSE', 'ECE', 'ME', 'Civil', 'IT', 'Biotech', 'Chemical', 'EEE'];
+            const firstNames = ['Aarav', 'Priya', 'Rahul', 'Sneha', 'Arjun', 'Kavya', 'Vikram', 'Ananya', 'Rohit', 'Neha',
+                'Deepak', 'Pooja', 'Suresh', 'Meera', 'Kiran', 'Divya', 'Aditya', 'Lakshmi', 'Naveen', 'Shreya',
+                'Amit', 'Sara', 'Ravi', 'Anjali', 'Kumar', 'Lata', 'Mohan', 'Geeta', 'Siddharth', 'Rina'
+            ];
+            const lastNames = ['Sharma', 'Patel', 'Verma', 'Reddy', 'Nair', 'Menon', 'Singh', 'Iyer', 'Gupta', 'Joshi',
+                'Desai', 'Babu', 'Raj', 'Kumar', 'Rao', 'Shetty', 'Mishra', 'Agarwal', 'Khanna', 'Mehta'
+            ];
+
+            for (let i = 0; i < 150; i++) {
+                const firstName = firstNames[i % firstNames.length];
+                const lastName = lastNames[Math.floor(i / firstNames.length) % lastNames.length];
+                const branch = branches[i % branches.length];
+                const mobile = '9' + String(876543210 + i).padStart(9, '0');
+                data += `${firstName} ${lastName}, ${branch}, ${mobile}\n`;
+            }
+            document.getElementById('studentData').value = data;
+            generateQRs();
+            showToast('✅ 150 sample students loaded!');
         }
 
         // ============================================================
@@ -1344,21 +1597,121 @@ Shreya Sharma, IT, 9876543229</textarea>
         document.getElementById('pdfBtn').addEventListener('click', downloadPDF);
         document.getElementById('previewPdfBtn').addEventListener('click', previewPDF);
         document.getElementById('sampleBtn').addEventListener('click', loadSample);
-        document.getElementById('clearQrBtn').addEventListener('click', clearQRs);
+        document.getElementById('sample150Btn').addEventListener('click', loadSample150);
+        document.getElementById('clearQrBtn').addEventListener('click', () => {
+            if (confirm('Clear QR codes? (Logs will be preserved)')) {
+                qrDataList = [];
+                studentDB = {};
+                document.getElementById('qrGridContainer').innerHTML = '';
+                updateStats();
+                persistData();
+                showToast('🧹 QR codes cleared');
+                addLog('system', '🧹 QR codes cleared');
+            }
+        });
         document.getElementById('startScannerBtn').addEventListener('click', startScanner);
         document.getElementById('stopScannerBtn').addEventListener('click', stopScanner);
         document.getElementById('manualEntryBtn').addEventListener('click', () => manualMark('entry'));
         document.getElementById('manualFoodBtn').addEventListener('click', () => manualMark('food'));
         document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
         document.getElementById('copyLogsBtn').addEventListener('click', copyLogs);
-        document.getElementById('clearLogsBtn').addEventListener('click', clearLogs);
+        document.getElementById('clearLogsBtn').addEventListener('click', clearAllData);
+        document.getElementById('testSheetBtn').addEventListener('click', testSheetConnection);
+        document.getElementById('syncAllBtn').addEventListener('click', syncAllLogsToSheet);
+
+        // Modal controls
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('pdfModal').style.display = 'none';
+        });
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('pdfModal').style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('pdfModal')) {
+                document.getElementById('pdfModal').style.display = 'none';
+            }
+        });
+
+        document.getElementById('downloadPdfFromPreview').addEventListener('click', function() {
+            const modal = document.getElementById('pdfModal');
+            const pdf = modal.dataset.pdf;
+            if (pdf) {
+                pdf.save(`farewell_qr_codes_${new Date().toISOString().slice(0,10)}.pdf`);
+                addLog('system', 'PDF downloaded from preview');
+            }
+            modal.style.display = 'none';
+        });
+
+        // Script guide
+        document.getElementById('showScriptGuide').addEventListener('click', (e) => {
+            e.preventDefault();
+            alert(
+                `📖 Google Apps Script Setup:
+
+1. Create a new Google Sheet
+2. Open Extensions > Apps Script
+3. Paste this code:
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  if (data.test) {
+    sheet.appendRow(['TEST', data.message, data.timestamp]);
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'}));
+  }
+  
+  if (data.syncAll) {
+    data.logs.forEach(log => {
+      sheet.appendRow([log.timestamp, log.type, log.message]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'}));
+  }
+  
+  const row = [
+    data.studentId || '',
+    data.name || '',
+    data.branch || '',
+    data.mobile || '',
+    data.action || '',
+    data.actionType || '',
+    data.timestamp || '',
+    data.entryUsed || false,
+    data.foodUsed || false,
+    data.entryTime || '',
+    data.foodTime || ''
+  ];
+  sheet.appendRow(row);
+  return ContentService.createTextOutput(JSON.stringify({status:'ok'}));
+}
+
+4. Deploy as Web App (Execute as: Me, Who has access: Anyone)
+5. Copy the web app URL and paste it in the field above.`
+            );
+        });
 
         // ============================================================
         //  INIT
         // ============================================================
-        addLog('system', '🚀 App ready!');
-        setTimeout(() => { loadSample(); }, 300);
-        console.log('✅ Farewell Scanner loaded. Student DB:', studentDB);
+        // Load persisted data first
+        const hasData = loadPersistedData();
+
+        if (hasData && Object.keys(studentDB).length > 0) {
+            // Restore UI from data
+            restoreUIFromData();
+            addLog('system', `🔄 Restored ${qrDataList.length} QR codes from local storage`);
+            showToast(`🔄 Restored ${qrDataList.length} QR codes from local storage`);
+        } else {
+            // Load sample data
+            addLog('system', '🚀 App ready!');
+            setTimeout(() => { loadSample(); }, 300);
+        }
+
+        console.log('✅ Farewell Scanner loaded with persistence. Data:', {
+            students: Object.keys(studentDB).length,
+            qrs: qrDataList.length,
+            logs: scanLogs.length
+        });
     </script>
 </body>
 </html>
